@@ -132,7 +132,6 @@ sp::proj4string(data) = sp::proj4string(contorno) # Contorno (shape) and data ha
 ## 4.2 Ordianry kriging
 
 mapa <- krige(solo_atr ~ 1, data, grid, model = fit.exp)
-# incluindo argumento "block" permite fazer krigagem em bloco
 plot(mapa)
 
 
