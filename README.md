@@ -1,4 +1,4 @@
-#This code is made for geostatistical interpolation with ordinary kriging using gstat package
+# This code is made for geostatistical interpolation with ordinary kriging using gstat package
 
 For this we use the RStudio iteration with R version 3.4.4
 
@@ -13,9 +13,13 @@ For this we use the RStudio iteration with R version 3.4.4
 
 #1. First steps in R:# 
 ##1.1 - We start by cleaning R environment ##
+
 rm(list = ls())
+
 gc(reset=T)
+
 graphics.off()
+
 
 ##1.2 - And install required packages
 #install.packages("pacmann")
