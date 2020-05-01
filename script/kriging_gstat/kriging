@@ -1,167 +1,155 @@
+#This code is made for geostatistical interpolation with ordinary kriging using gstat package
 
-  #R - versão 3.4.4
-  #Rstudio + RMarkdown
-  
-  #Esta rotina utiliza o pacote gstat para as análises geoestatísticas e estão implementadas as seguintes análises:
-  #1.Primeiros passos do R
-  #2. ANÁLISE VARIOGRÁFICA: realizada pelo método dos momentos (MoM).
-  #3. VALIDAÇÃO CRUZADA: leave-one-out para escolha do modelo e apresentação em 
-  #gráfico de correlação.
-#4. INTERPOLAÇÃO POR KRIGAGEM: krigagem ordinária pontual e exportação de mapas.
+For this we use the RStudio iteration with R version 3.4.4
 
-#1. Primeiros passos do R: 
-#começaremos removendo dados que estão salvos no R
+#There are included the following analysis:
+1st - First steps in R, installing and loading libraries, loading directory to source file location
+2nd - Variogram analysis - we use Method of Moments (MoM) for experimental variogram with GLS fitting of theorical variogram with spheric, expanential and gaussian models.
+3rd - Leave-one-out Cross validation (LOOCV) to choose semivariogram fit.
+4th - Interpolation with kriging:  puntual Ordinary kriging (OK)
+5th - Exporting interpolated maps
+
+#1. First steps in R:# 
+##1.1 - We start by cleaning R environment ##
 rm(list = ls())
 gc(reset=T)
 graphics.off()
 
-#Além disso, vamos instalar pacotes desenvolvidos para o R a fim de realizar as análises geoestatísticas
-#install.packages("gstat")
-library(gstat)
-library(raster)
-library(rstudioapi)
-library(sp)
+##1.2 - And install required packages
+#install.packages("pacmann")
+pacmann::p_load(gstat, raster, rstudioapi, sp)
 
-#Feito isso, selecionamos diretório de trabalho, usando o diretório onde a rotina está salva
+##1.3 - Than we set working directory to source file location (directory turns to be the location where the R script is saved in your computer)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
-#Agora, para análises, vamos carregar os dados.Neste exemplo realizados análise da coluna "P" de um arquivo)
-#Dicas: cuidado para sempre trabalhar com dados já isentos de outliers
+##1.4 - Loading data: our data is already free of outliers; we strongly recommend data preprocessing prior to interpolation
+data = read.csv(file = "../../data/data points/data.csv", header = TRUE, sep = ',')
+data <- data[,c(2,3,4)] #selecting important columns (x, y, z)
+names(data) <- c("x", "y", "z")
+sp::coordinates(data) = ~x+y # transform data to spatial object (x and y must be in UTM)
 
-dados = read.csv(file = "Kriging/data/data points/data.csv", header = TRUE, sep = ',')
-dados<- dados[,c(2,3,4)]
-names(dados) <- c("x", "y", "z")
-sp::coordinates(dados) = ~x+y # informa os nomes das colunas com coordenadas (em UTM)
+##1.5 - We separate the primary variable. This will facilitate analysis
+solo_atr<- data$z
 
-#Vamos separar o dado que iremos interpolar em uma veriável. Isso facilitará as análises ao longo do script.
-solo_atr<- dados$z
+##1.6 - Data visualization according to the "z" values
+sp::bubble(data, "z")
 
-#Outra primeira análise que pode ser feita é a partir da função "bubble" para visualização da localização dos pontos na área e valores da variável de interesse (nesse caso, o P)
-sp::bubble(dados, "z")
+#2. Variogram analysis: using MoM.
 
-#2. ANÁLISE VARIOGRÁFICA: realizada pelo método dos momentos (MoM).
+##2.1 - We start by visualization of the empirical variogram
+g = gstat(id="solo_attr", formula = solo_atr ~ 1, data=data)
+print(max(dist(data@coords))/2) # maximum distance between point coordinates (helps to limite variogram cutoff) 
+print(min(dist(data@coords))) # minimum distance between point coordinates (helps to define width)
 
-#Iniciamos a análise variográfica a partir da visualização do semivariogrma experimental
-g = gstat(id="solo_attr", formula = solo_atr ~ 1, data=dados)
-print(max(dist(dados@coords))/2) # maxima distancia entre pontos, para limitar distância do variograma em metade da maxdist
-print(min(dist(dados@coords))) # mínima distancia entre pontos, para ajudar a definir espaçAmento entre lags
-
-##2.1 Semivariogarma de nuvem
-#Também podemos visualizar o semivariograma de nuvem (onde aparecem todos os valores de semivarianicia entre os pares de pontos)
+cutoff = max(dist(data@coords))/2
+##2.2 - The variogram cloud
 var_could = gstat::variogram(g, cloud=T) 
 plot(var_could)
 
-##2.2 Mapa variográfico
-Os efeitos direcionais (tendência e anisotropia) são visualizados na forma de mapa variográfico
-var_map = gstat::variogram(g, cutoff=955.2487, width=100, map=T) # cutoff=max dist; width = tamanho lag
+##2.3 Variogram map
+It is possible to identify trend and anisotropy
+var_map = gstat::variogram(g, cutoff=cutoff, width=100, map=T) 
 plot(var_map)
 
-##2.3 Semivariograma experimental
-#Após essas primeiras visualizações, retornamos ao semivariograma experimental, no qual adaptaremos um modelo teórico, capaz de representá-lo, para realização da interpolação por krigagem
-var_exp = gstat::variogram(g, cutoff=955.2487, width=100) # cutoff=máxima distância a ser avaliada; width = tamanho do lag
+##2.4 - Experimental variogram by MoM
+var_exp = gstat::variogram(g, cutoff=cutoff, width=100) 
 plot(var_exp)
 
-g = gstat(id="solo_attr", formula = solo_atr ~ x+y, data=dados)
-var_exp = gstat::variogram(g, cutoff=955.2487, width=100) # cutoff=máxima distância a ser avaliada; width = tamanho do lag
+g = gstat(id="solo_attr", formula = solo_atr ~ 1, data=data)
+var_exp = gstat::variogram(g, cutoff=cutoff, width=100)
 plot(var_exp)
 
-##2.4 Semivariograma teórico (MoM)
-#O semivariograma teórico é primeiramente ajustado pelo usuário a partir do "chute inicial" dos seus parâmetros.
-#Esse semivariograma pode ser ajustado por diversos modelos, aqui testaremos apenas o esférico, exponencial e gaussiano
+##2.5 - Theorical variogram 
+We first use a "eye fit" to choose the variogram parameters - nugget effect, partial sill and range. 
+It can be fitted by a variety of models. Here we test spheric, exponential and gaussian models.
 
-###2.4.1 Modelo esférico
-fit.sph = fit.variogram(var_exp, vgm(0.15, "Sph", 250, 0.2)) # vgm(contribuição, modelo, alcance, pepita)
+###2.5.1 - Spheric
+fit.sph = fit.variogram(var_exp, vgm(0.004, "Sph", 450, 0.001)) # vgm(partial sill, model, range, nugget effect)
 plot(var_exp, fit.sph)
 
-###2.4.2 Modelo exponencial
-fit.exp = fit.variogram(var_exp, vgm(0.15, "Exp", 250, 0.2)) # vgm(contrib, modelo, alcance, pepita)
+###2.5.2 - Exponential
+fit.exp = fit.variogram(var_exp, vgm(0.004, "Exp", 450, 0.001)) # vgm(partial sill, model, range, nugget effect)
 plot(var_exp, fit.exp)
 
-###2.4.3 Modelo gaussiano
-fit.gau = fit.variogram(var_exp, vgm(0.15, "Gau", 150, 0.2)) # vgm(contrib, modelo, alcance, pepita)
+###2.5.3 - Gaussian
+fit.gau = fit.variogram(var_exp, vgm(0.004, "Gau", 450, 0.001)) # vgm(partial sill, model, range, nugget effect)
 plot(var_exp, fit.gau)
 
-#3. VALIDAÇÃO CRUZADA: leave-one-out para escolha do modelo e apresentação em gráfico de correlação.
+#3. LOOCV: leave-one-out cross validation to choose the best model.
 
-#A escolha do modelo teórico não deve ser baseada somente na intuição do usuário, por isso utilizamos validação cruzada para determinar qual modelo teórico apresenta menores erros. 
-
-##3.1 Validação cruzada do modelo esférico
-xvalid.sph = krige.cv(z ~ x+y, locations = dados, model = fit.sph) # função para validação cruzada
-plot(xvalid.sph$var1.pred ~ solo_atr, cex = 1.2, lwd = 2) #, ylim=c(10,50), xlim=c(10,50)) # eixos y e x e seus limites selecionados depois para deixar quadrado
-abline(0, 1, col = "lightgrey", lwd = 2) # linha 1:1
-lm_sph = lm(xvalid.sph$var1.pred ~ solo_atr) # y em função de x
-abline(lm_sph, col = "red", lwd = 2) # linha da correlação
-r2_sph = summary(lm_sph)$r.squared # extrai R2
+###3.1 - LOOCV of spheric model
+xvalid.sph = krige.cv(z ~ 1, locations = data, model = fit.sph) # cross validation function
+plot(xvalid.sph$var1.pred ~ solo_atr, cex = 1.2, lwd = 2) #, ylim=c(10,50), xlim=c(10,50)) 
+abline(0, 1, col = "lightgrey", lwd = 2)  
+lm_sph = lm(xvalid.sph$var1.pred ~ solo_atr) 
+abline(lm_sph, col = "red", lwd = 2) 
+r2_sph = summary(lm_sph)$r.squared 
 rmse_sph = hydroGOF::rmse(xvalid.sph$var1.pred, solo_atr)
 
-##3.2 Validação cruzada do modelo exponencial
-xvalid.exp = krige.cv(z ~ x+y, locations = dados, model = fit.exp)
-plot(xvalid.exp$var1.pred ~ dados$z, cex = 1.2, lwd = 2) #, ylim=c(10,50), xlim=c(10,50)) # eixos y e x e seus limites selecionados depois para deixar quadrado
-abline(0, 1, col = "lightgrey", lwd = 2) # linha 1:1
-lm_exp = lm(xvalid.exp$var1.pred ~ solo_atr) # y em função de x
-abline(lm_exp,  col = "red", lwd = 2) # linha da correlação
-r2_exp = summary(lm_exp)$r.squared # extrai R2
-rmse_exp = hydroGOF::rmse(xvalid.exp$var1.pred, solo_atr) # calcula RMSE, simulado x observado (y, x)
+###3.2 - LOOCV of exponential model
+xvalid.exp = krige.cv(z ~ 1, locations = data, model = fit.exp)
+plot(xvalid.exp$var1.pred ~ dados$z, cex = 1.2, lwd = 2) 
+abline(0, 1, col = "lightgrey", lwd = 2) 
+lm_exp = lm(xvalid.exp$var1.pred ~ solo_atr)
+abline(lm_exp,  col = "red", lwd = 2) 
+r2_exp = summary(lm_exp)$r.squared 
+rmse_exp = hydroGOF::rmse(xvalid.exp$var1.pred, solo_atr)
 
-##3.3 Validação cruzada do modelo gaussiano
-xvalid.gau = krige.cv(z ~ x+y, locations = dados, model = fit.gau)
-plot(xvalid.gau$var1.pred ~ dados$z, cex = 1.2, lwd = 2) #, ylim=c(10,50), xlim=c(10,50)) # eixos y e x e seus limites selecionados depois para deixar quadrado
-abline(0, 1, col = "lightgrey", lwd = 2) # linha 1:1
-lm_gau = lm(xvalid.gau$var1.pred ~ solo_atr) # y em função de x
-abline(lm_gau,  col = "red", lwd = 2) # linha da correlação
+###3.3 - LOOCV of gaussian model
+xvalid.gau = krige.cv(z ~ 1, locations = data, model = fit.gau)
+plot(xvalid.gau$var1.pred ~ dados$z, cex = 1.2, lwd = 2) 
+abline(0, 1, col = "lightgrey", lwd = 2) 
+lm_gau = lm(xvalid.gau$var1.pred ~ solo_atr) 
+abline(lm_gau,  col = "red", lwd = 2)
 r2_gau = summary(lm_gau)$r.squared # extrai R2
 rmse_gau = hydroGOF::rmse(xvalid.gau$var1.pred, solo_atr) 
 
 
-##3.4 Visualização dos resultados da validação cruzada
-df.r2 = data.frame(r2_exp,r2_gau,r2_sph) # cria conjunto com os R2       
-df.rmse = data.frame(rmse_exp, rmse_gau,rmse_sph) # cria conjunto com os RMSE
-temp = data.frame(cbind(t(df.r2), t(df.rmse))) # une os dois conjuntos 
+##3.4 Visualization of LOOCV results
+df.r2 = data.frame(r2_exp,r2_gau,r2_sph) #Set with R2       
+df.rmse = data.frame(rmse_exp, rmse_gau,rmse_sph) # Set with RMSE
+temp = data.frame(cbind(t(df.r2), t(df.rmse))) # Join sets conjuntos 
 colnames(temp) = c('R2', 'RMSE')
-rnames = gsub('r2_','',rownames(temp)) # remove o prefixo R2_ dos nomes das linhas
-rownames(temp) = rnames # substitui o nome das linhas simplifcados na tabela original
+rnames = gsub('r2_','',rownames(temp)) # Removes R2_ prefix from row names
+rownames(temp) = rnames 
 print(temp)
 
+#4. Kriging interpolation
 
-#4. INTERPOLA??O POR KRIGAGEM: krigagem ordin?ria pontual e exporta??o de mapas.
+##4.1 We create a grid for interpolation
 
-##4.1 Cria??o de grade para interpolar os dados
+To performe this we open our data boundary/cotorno
 
-Para realizar a interpola??o, vamos abrir o contorno da ?rea (formato shp "Shapefile")
+contorno <- shapefile("../../data/boundary/cotorno.shp")
 
-contorno <- shapefile("Kriging/data/boundary/cotorno.shp")
+And then we create a grid
+r = raster::raster(contorno, res = 5) #  "res" sets pixel resolution
+rp = raster::rasterize(contorno, r, 0) 
+grid = as(rp, "SpatialPixelsDataFrame") 
+sp::plot(grid)
+sp::proj4string(data) = sp::proj4string(contorno) # Contorno (shape) and data have the same CRS
 
-Agora vamos criar uma grade, nesse contorno, para interpola??o
+## 4.2 Ordianry kriging
 
-r = raster(contorno, res = 5) # resolu??o do pixel 
-rp = rasterize(contorno, r, 0) # cria um objeto no formato raster
-grid = as(rp, "SpatialPixelsDataFrame") # transforma em pontos onde ser?o realizadas as interpola??es
-plot(grid)
-proj4string(dados) = proj4string(contorno) # informa que dados (csv) tem o mesmo CRS do contorno (shape)
-
-
-## 4.2 Interpola??o por krigagem ordin?ria
-
-mapa <- krige(solo_atr ~ 1, dados, grid, model = fit.exp)
-# incluindo argumento "block" permite fazer krigagem em bloco
+mapa <- krige(solo_atr ~ 1, data, grid, model = fit.exp)
 plot(mapa)
 
 
-## 4.3 Salvar mapa interpolado
+#5 Export map
 
-#Primeiro convertemos o formato do mapa gerado para raster, adicionando proje??o no mapa 
+We first convert maps format to raster and add the maps projection
 
-# Converter para raster
+##5.1 - Convert to raster
 mapaRaster = raster(mapa)
 proj4string(mapaRaster) = proj4string(contorno) 
 
 
-Por fim salvamos o mapa no local de nossa escolha
+##5.1 - Exporting the map
 
-# Salvar a imagem do mapa
 writeRaster(mapaRaster, 
-            filename = 'nomearquivo.tif',
+            filename = '../../maps/z_interpolated.tif',#here we choose where we want to save
             format = 'GTiff',
             overwrite = T)
+
 
 
