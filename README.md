@@ -9,8 +9,8 @@ For this we use the RStudio iteration with R version 3.4.4
 4th - Interpolation with kriging:  puntual Ordinary kriging (OK)
 5th - Exporting interpolated maps
 
-#1. First steps in R: 
-##1.1 - We start by cleaning R environment 
+#1. First steps in R: #
+##1.1 - We start by cleaning R environment ##
 rm(list = ls())
 gc(reset=T)
 graphics.off()
