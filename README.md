@@ -146,7 +146,6 @@ proj4string(mapaRaster) = proj4string(contorno)
 
 ##5.1 - Exporting the map
 
-# Salvar a imagem do mapa
 writeRaster(mapaRaster, 
             filename = '../../maps/z_interpolated.tif',#here we choose where we want to save
             format = 'GTiff',
