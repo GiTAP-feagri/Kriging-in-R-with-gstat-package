@@ -1,4 +1,4 @@
-#This code is made for geostatistical interpolation with ordinary kriging using gstat package
+# This code is made for geostatistical interpolation with ordinary kriging using gstat package #
 
 For this we use the RStudio iteration with R version 3.4.4
 
