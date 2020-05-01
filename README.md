@@ -1,1 +1,1 @@
-# Kriging-in-R-with-gstat-package
+Rotine for Kriging using gstat package
