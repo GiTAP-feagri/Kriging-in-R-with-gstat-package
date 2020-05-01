@@ -1,15 +1,17 @@
-# This code is made for geostatistical interpolation with ordinary kriging using gstat package #
+#This code is made for geostatistical interpolation with ordinary kriging using gstat package
 
 For this we use the RStudio iteration with R version 3.4.4
 
 #There are included the following analysis:
 1st - First steps in R, installing and loading libraries, loading directory to source file location
 2nd - Variogram analysis - we use Method of Moments (MoM) for experimental variogram with GLS fitting of theorical variogram with spheric, expanential and gaussian models.
+
 3rd - Leave-one-out Cross validation (LOOCV) to choose semivariogram fit.
+
 4th - Interpolation with kriging:  puntual Ordinary kriging (OK)
 5th - Exporting interpolated maps
 
-#1. First steps in R: #
+#1. First steps in R:# 
 ##1.1 - We start by cleaning R environment ##
 rm(list = ls())
 gc(reset=T)
