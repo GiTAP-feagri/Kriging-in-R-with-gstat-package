@@ -19,22 +19,26 @@ spheric, expanential and gaussian models.
 
 ## 1.1 - We start by cleaning R environment ##
 
+```{r}
 rm(list = ls())
 
 gc(reset=T)
 
 graphics.off()
-
+```
 
 ## 1.2 - And install required packages
 
+```{r}
 #install.packages("pacmann")
-
 pacmann::p_load(gstat, raster, rstudioapi, sp)
+```
 
 ## 1.3 - Than we set working directory to source file location (directory turns to be the location where the R script is saved in your computer)
 
+```{r}
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+```
 
 ## 1.4 - Loading data: our data is already free of outliers; we strongly recommend data preprocessing prior to interpolation
 
