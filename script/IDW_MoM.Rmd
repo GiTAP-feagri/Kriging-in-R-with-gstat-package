@@ -97,18 +97,6 @@ eval.idw = data.frame(expand.grid (k = c(seq (0.5, 4, by = 0.5)),
                         r2_train= NA))
 ```
 
-we also create a index to go through the folds
-
-```{r}
-creat_fold_index = function(nrows, folds){
-  k_index = rep(1:folds, ceiling (nrows/folds))
-  k_index = k_index [1:nrows]
-  k_index = sample (k_index)
-  return(k_index)
-}
-
-cv_index = creat_fold_index(nrow(data), 10)
-```
 
 we will use the functions: 
 
