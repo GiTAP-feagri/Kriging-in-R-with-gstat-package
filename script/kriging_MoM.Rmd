@@ -167,7 +167,7 @@ rmse_sph = hydroGOF::rmse(xvalid.sph$var1.pred, solo_atr)
 ```{r}
 xvalid.exp = krige.cv(z ~ 1, locations = data, model = fit.exp)
 
-plot(xvalid.exp$var1.pred ~ dados$z, cex = 1.2, lwd = 2) 
+plot(xvalid.exp$var1.pred ~ data$z, cex = 1.2, lwd = 2) 
 
 abline(0, 1, col = "lightgrey", lwd = 2)
 
@@ -185,7 +185,7 @@ rmse_exp = hydroGOF::rmse(xvalid.exp$var1.pred, solo_atr)
 ```{r}
 xvalid.gau = krige.cv(z ~ 1, locations = data, model = fit.gau)
 
-plot(xvalid.gau$var1.pred ~ dados$z, cex = 1.2, lwd = 2) 
+plot(xvalid.gau$var1.pred ~ data$z, cex = 1.2, lwd = 2) 
 
 abline(0, 1, col = "lightgrey", lwd = 2) 
 
@@ -223,7 +223,7 @@ print(temp)
 To performe this we open our data boundary/cotorno
 
 ```{r}
-contorno <- shapefile("../../data/boundary/cotorno.shp")
+contorno <- shapefile("../data/boundary/cotorno.shp")
 
 #And then we create a grid
 

@@ -203,6 +203,7 @@ mapaRaster = raster(mapa)
 proj4string(mapaRaster) = proj4string(contorno) 
 ```
 
+
 ## 4.2 - Exporting the map
 
 ```{r}
@@ -211,3 +212,22 @@ writeRaster(mapaRaster,
             format = 'GTiff',
             overwrite = T)
 ```
+
+Plotting the map with sp
+
+First we insert our interpolated data into our grid and transform it into a sf object
+```{r}
+grid$idw = mapa$var1.pred
+grid = st_as_sf(grid)
+grid
+```
+```{r}
+plot(grid["idw"], key.pos = 1, axes = TRUE, key.width = lcm(1.3), key.length = 1.0)
+```
+
+We can also select our intervals
+
+```{r}
+plot(grid["idw"], breaks = c(0, seq (0.2, 1.7, by = 0.2), seq(1.7,5, by=1)))
+```
+
