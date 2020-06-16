@@ -31,7 +31,7 @@ graphics.off()
 
 ```{r}
 #install.packages("pacmann")
-pacmann::p_load(gstat, raster, rstudioapi, sp)
+pacman::p_load(gstat, raster, rstudioapi, sp)
 ```
 
 ## 1.3 - Than we set working directory to source file location (directory turns to be the location where the R script is saved in your computer)
@@ -43,7 +43,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ## 1.4 - Loading data: our data is already free of outliers; we strongly recommend data preprocessing prior to interpolation
 
 ```{r}
-data = read.csv(file = "../../data/data points/data.csv", header = TRUE, sep = ',')
+data = read.csv(file = "../data/data points/data.csv", header = TRUE, sep = ',')
 
 data <- data[,c(2,3,4)] #selecting important columns (x, y, z)
 
@@ -167,7 +167,7 @@ rmse_sph = hydroGOF::rmse(xvalid.sph$var1.pred, solo_atr)
 ```{r}
 xvalid.exp = krige.cv(z ~ 1, locations = data, model = fit.exp)
 
-plot(xvalid.exp$var1.pred ~ dados$z, cex = 1.2, lwd = 2) 
+plot(xvalid.exp$var1.pred ~ data$z, cex = 1.2, lwd = 2) 
 
 abline(0, 1, col = "lightgrey", lwd = 2)
 
@@ -185,7 +185,7 @@ rmse_exp = hydroGOF::rmse(xvalid.exp$var1.pred, solo_atr)
 ```{r}
 xvalid.gau = krige.cv(z ~ 1, locations = data, model = fit.gau)
 
-plot(xvalid.gau$var1.pred ~ dados$z, cex = 1.2, lwd = 2) 
+plot(xvalid.gau$var1.pred ~ data$z, cex = 1.2, lwd = 2) 
 
 abline(0, 1, col = "lightgrey", lwd = 2) 
 
@@ -223,9 +223,9 @@ print(temp)
 To performe this we open our data boundary/cotorno
 
 ```{r}
-contorno <- shapefile("../../data/boundary/cotorno.shp")
+contorno <- shapefile("../data/boundary/cotorno.shp")
 
-And then we create a grid
+#And then we create a grid
 
 r = raster::raster(contorno, res = 5) #  "res" sets pixel resolution
 
@@ -238,7 +238,7 @@ sp::plot(grid)
 sp::proj4string(data) = sp::proj4string(contorno) # Contorno (shape) and data have the same CRS
 ```
 
-## 4.2 - Ordianry kriging
+## 4.2 - Ordinary kriging
 
 ```{r}
 mapa <- krige(solo_atr ~ 1, data, grid, model = fit.exp)
@@ -258,11 +258,11 @@ mapaRaster = raster(mapa)
 proj4string(mapaRaster) = proj4string(contorno) 
 ```
 
-## 5.1 - Exporting the map
+## 5.2 - Exporting the map
 
 ```{r}
 writeRaster(mapaRaster, 
-            filename = '../../maps/z_interpolated.tif',#here we choose where we want to save
+            filename = '../maps/z_interpolated.tif',#here we choose where we want to save
             format = 'GTiff',
             overwrite = T)
 ```

@@ -262,7 +262,7 @@ proj4string(mapaRaster) = proj4string(contorno)
 
 ```{r}
 writeRaster(mapaRaster, 
-            filename = '../../maps/z_interpolated.tif',#here we choose where we want to save
+            filename = '../maps/z_interpolated.tif',#here we choose where we want to save
             format = 'GTiff',
             overwrite = T)
 ```

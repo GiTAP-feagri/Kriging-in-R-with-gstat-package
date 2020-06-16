@@ -1,0 +1,126 @@
+---
+title: "Untitled"
+author: "Agda"
+date: "6/11/2020"
+output: html_document
+---
+
+```{r}
+pacman::p_load(ggsn, ggplot2, sf)
+```
+
+Openning data
+
+
+the interpolated data
+
+```{r}
+mapa = raster("../maps/z_interpolated_idw.tif")
+mapa.df = as.data.frame(mapa, xy = T)
+mapa.df = dplyr::rename(mapa.df, z =  z_interpolated_idw)
+```
+
+the boundary
+
+```{r}
+contorno <- shapefile("../data/boundary/cotorno.shp")
+
+#And then we create a grid
+
+r = raster::raster(contorno, res = 10) #  "res" sets pixel resolution
+
+rp = raster::rasterize(contorno, r, 0) 
+
+grid = as(rp, "SpatialPixelsDataFrame") 
+
+sp::plot(grid)
+
+```
+
+Plotting the map with sp
+
+First we insert our interpolated data into our grid and transform it into a sf object
+```{r}
+library(sf)
+grid$idw = mapa.df$z
+grid = st_as_sf(grid)
+grid
+```
+
+
+```{r}
+library(ggplot2)
+(ggm1 <- ggplot2::ggplot(grid, aes(colour = idw)) +
+    geom_sf() +
+    scale_fill_continuous(low = "#fff7ec", high = "#7F0000"))
+```
+An interative plot 
+
+
+```{r}
+library(plotly)
+library(sf)
+
+fig <- ggplotly(
+  ggplot(grid) +
+  geom_sf(aes(colour = idw))
+) 
+
+fig
+```
+
+
+```{r}
+breaks = c(0, seq (0.2, 1.7, by = 0.2), seq(1.7,5, by=1))
+```
+
+
+```{r}
+library("ggspatial")
+library("viridis")
+ggplot(data = grid) +
+    geom_sf(fill = "antiquewhite1") +
+    geom_sf(data = grid, aes(colour = idw)) +
+    scale_fill_viridis() + 
+    scale_color_viridis(breaks = c(0, seq (0.01, 1.7, by = 0.2), seq(1.71,5, by=1)), name = "z (unit)") +
+    annotation_scale(location = "br", width_hint = 0.5, style = "bar") +
+    coord_sf(xlim = c(-180, 1500), ylim = c(-180, 1550), expand = T,datum = sf::st_crs(32722),
+  label_graticule = waiver(),   clip = "on") +
+    xlab("Longitude") + ylab("Latitude") +
+    ggtitle("IDW interpolation", subtitle = "(z element)") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+```
+We can change intervals with sp package
+
+```{r}
+plot(grid["idw"], breaks = c(0, seq (0.2, 1.7, by = 0.2), seq(1.7,5, by=1)))
+```
+We can also use spplot function
+
+```{r}
+library("colorspace")
+hcl_palettes(plot = TRUE)
+```
+
+
+```{r}
+library(surveillance)
+my.palette <- colorspace::sequential_hcl(8, "Viridis")
+spplot(mapa, 
+       scales = list(draw = TRUE), 
+		xlab = "Longitude", ylab = "Latitude", 
+		col.regions = my.palette,
+		colorkey = list(space = "bottom", height = 1),
+		names.attr=c('z_interpolated_idw'),
+		par.settings = list(fontsize = list(text = 12)), at = c(0, seq (0.2, 1.7, by = 0.2), seq(1.7,5, by=1)))
+```
+
+
+Usefull links:
+To ggplot themes: <https://ggplot2.tidyverse.org/reference/ggtheme.html>
+Viridis palettes: <https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html>
+RColorBrewer palletes: <http://www.nickeubank.com/wp-content/uploads/2015/10/RGIS3_MakingMaps_part1_mappingVectorData.html>
+To sp plots: <https://edzer.github.io/sp/>
+To colorspace palletes: <https://cran.r-project.org/web/packages/colorspace/vignettes/colorspace.html>
+
